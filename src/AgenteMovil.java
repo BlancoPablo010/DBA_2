@@ -26,11 +26,11 @@ public class AgenteMovil extends Agent {
         }
 
         // Generar posiciones aleatorias para el agente y el objetivo
-        posicionAgente = generarPosicionAleatoria(); // new int[]{0, 0};
-        posicionObjetivo = generarPosicionAleatoria(); // new int[]{6,7};
+        posicionAgente = generarPosicionAleatoria();
+        posicionObjetivo = generarPosicionAleatoria();
 
         // Asegurarse de que el agente y el objetivo no estén en la misma posición
-        while (posicionAgente[0] == posicionObjetivo[0] && posicionAgente[1] == posicionObjetivo[1]) {
+        while (Arrays.equals(posicionAgente, posicionObjetivo)) {
             posicionObjetivo = generarPosicionAleatoria();
         }
 
@@ -40,25 +40,22 @@ public class AgenteMovil extends Agent {
         interfaz.setDireccionAgente(0); // Inicializar la dirección a 0 grados (mirando a la derecha)
         interfaz.repaintMapa();
 
-        // Calcular el camino usando A*
-        camino = buscarCamino();
-
-        if (camino == null) {
-            JOptionPane.showMessageDialog(null, "¡No se encontró un camino al objetivo!");
-            doDelete(); // Terminar el agente
-            return;
-        }
-
         // Añadir un comportamiento que mueve al agente cada 0.5 segundos
         addBehaviour(new TickerBehaviour(this, 500) {
-            private int indicePaso = 1; // Comenzamos desde 1 porque la posición 0 es la posición actual
-
             protected void onTick() {
-                if (indicePaso < camino.size()) {
-                    moverAgente(camino.get(indicePaso));
-                    indicePaso++;
-                } else {
-                    // El agente ha llegado al objetivo
+                camino = buscarCamino();
+                if (camino == null || camino.isEmpty()) {
+                    JOptionPane.showMessageDialog(null, "¡No se encontró un camino al objetivo!");
+                    doDelete(); // Terminar el agente
+                    return;
+                }
+
+                // Mover al agente al siguiente paso
+                moverAgente(camino.get(0));
+                camino.remove(0);
+
+                // Comprobar si el agente ha alcanzado el objetivo
+                if (Arrays.equals(posicionAgente, posicionObjetivo)) {
                     SwingUtilities.invokeLater(() -> {
                         interfaz.setPosicionAgente(posicionAgente);
                         interfaz.setPosicionObjetivo(null); // Eliminar el objetivo de la interfaz
@@ -110,7 +107,7 @@ public class AgenteMovil extends Agent {
         });
     }
 
-    // Implementación del algoritmo A*
+    // Implementación del algoritmo A* parcial
     private List<int[]> buscarCamino() {
         PriorityQueue<Nodo> abiertos = new PriorityQueue<>();
         Set<Nodo> cerrados = new HashSet<>();
@@ -122,13 +119,12 @@ public class AgenteMovil extends Agent {
             Nodo actual = abiertos.poll();
 
             if (actual.getFila() == posicionObjetivo[0] && actual.getColumna() == posicionObjetivo[1]) {
-                // Se encontró el camino al objetivo
                 return reconstruirCamino(actual);
             }
 
             cerrados.add(actual);
 
-            for (int[] vecino : obtenerVecinos(actual)) {
+            for (int[] vecino : obtenerVecinosParciales(actual)) {
                 if (!mapa.esCeldaAccesible(vecino[0], vecino[1])) {
                     continue;
                 }
@@ -152,45 +148,26 @@ public class AgenteMovil extends Agent {
             }
         }
 
-        // No se encontró un camino al objetivo
-        return null;
+        return null; // No se encontró un camino al objetivo
     }
 
-    // Método para reconstruir el camino desde el nodo objetivo hasta el inicio
-    private List<int[]> reconstruirCamino(Nodo nodoObjetivo) {
-        List<int[]> camino = new ArrayList<>();
-        Nodo actual = nodoObjetivo;
-
-        while (actual != null) {
-            camino.add(0, new int[]{actual.getFila(), actual.getColumna()});
-            actual = actual.getPadre();
-        }
-
-        return camino;
-    }
-
-    // Obtener los vecinos accesibles de un nodo
-    private List<int[]> obtenerVecinos(Nodo nodo) {
+    // Obtener los vecinos accesibles dentro del rango conocido por el agente
+    private List<int[]> obtenerVecinosParciales(Nodo nodo) {
         int fila = nodo.getFila();
         int columna = nodo.getColumna();
         List<int[]> vecinos = new ArrayList<>();
 
         int[][] direcciones = {
-                {-1, 0},  // Arriba
-                {1, 0},   // Abajo
-                {0, -1},  // Izquierda
-                {0, 1},   // Derecha
-                {-1, -1}, // Arriba-Izquierda
-                {-1, 1},  // Arriba-Derecha
-                {1, -1},  // Abajo-Izquierda
-                {1, 1}    // Abajo-Derecha
+            {-1, 0}, {1, 0}, {0, -1}, {0, 1},
+            {-1, -1}, {-1, 1}, {1, -1}, {1, 1}
         };
 
         for (int[] dir : direcciones) {
             int nuevaFila = fila + dir[0];
             int nuevaColumna = columna + dir[1];
 
-            if (mapa.esCeldaAccesible(nuevaFila, nuevaColumna)) {
+            // Solo considerar celdas en el rango cercano (visibilidad parcial)
+            if (mapa.esCeldaAccesible(nuevaFila, nuevaColumna) && Math.abs(nuevaFila - posicionAgente[0]) <= 1 && Math.abs(nuevaColumna - posicionAgente[1]) <= 1) {
                 vecinos.add(new int[]{nuevaFila, nuevaColumna});
             }
         }
