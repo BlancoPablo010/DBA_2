@@ -151,6 +151,20 @@ public class AgenteMovil extends Agent {
         return null; // No se encontró un camino al objetivo
     }
 
+    // Método para reconstruir el camino desde el nodo objetivo hasta el inicio
+    private List<int[]> reconstruirCamino(Nodo nodoObjetivo) {
+        List<int[]> camino = new ArrayList<>();
+        Nodo actual = nodoObjetivo;
+
+        while (actual != null) {
+            camino.add(0, new int[]{actual.getFila(), actual.getColumna()}); // Agregar al inicio de la lista
+            actual = actual.getPadre();
+        }
+
+        return camino;
+    }
+
+
     // Obtener los vecinos accesibles dentro del rango conocido por el agente
     private List<int[]> obtenerVecinosParciales(Nodo nodo) {
         int fila = nodo.getFila();
