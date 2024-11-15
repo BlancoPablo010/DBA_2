@@ -118,10 +118,6 @@ public class AgenteMovil extends Agent {
         while (!abiertos.isEmpty()) {
             Nodo actual = abiertos.poll();
 
-            if (actual.getFila() == posicionObjetivo[0] && actual.getColumna() == posicionObjetivo[1]) {
-                return reconstruirCamino(actual);
-            }
-
             cerrados.add(actual);
 
             for (int[] vecino : obtenerVecinosParciales(actual)) {
