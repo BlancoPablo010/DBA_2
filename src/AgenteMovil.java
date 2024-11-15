@@ -40,15 +40,17 @@ public class AgenteMovil extends Agent {
         interfaz.setDireccionAgente(0); // Inicializar la dirección a 0 grados (mirando a la derecha)
         interfaz.repaintMapa();
 
+        camino = buscarCamino();
+
+        if (camino == null || camino.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "¡No se encontró un camino al objetivo!");
+            doDelete(); // Terminar el agente
+            return;
+        }
+
         // Añadir un comportamiento que mueve al agente cada 0.5 segundos
         addBehaviour(new TickerBehaviour(this, 500) {
             protected void onTick() {
-                camino = buscarCamino();
-                if (camino == null || camino.isEmpty()) {
-                    JOptionPane.showMessageDialog(null, "¡No se encontró un camino al objetivo!");
-                    doDelete(); // Terminar el agente
-                    return;
-                }
 
                 // Mover al agente al siguiente paso
                 moverAgente(camino.get(0));
@@ -181,7 +183,7 @@ public class AgenteMovil extends Agent {
             int nuevaColumna = columna + dir[1];
 
             // Solo considerar celdas en el rango cercano (visibilidad parcial)
-            if (mapa.esCeldaAccesible(nuevaFila, nuevaColumna) && Math.abs(nuevaFila - posicionAgente[0]) <= 1 && Math.abs(nuevaColumna - posicionAgente[1]) <= 1) {
+            if (mapa.esCeldaAccesible(nuevaFila, nuevaColumna)) {
                 vecinos.add(new int[]{nuevaFila, nuevaColumna});
             }
         }
